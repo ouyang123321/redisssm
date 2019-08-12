@@ -1,0 +1,10 @@
+1、类RedisCacheConfig中
+    /*
+    * volatile:用以声明变量的值可能随时会被别的线程修改，volatile关键词修饰的变量会强制将修改的值立即写入主存，主存中的值更新会使缓存中的值失效。volatile会禁止指令重排
+    *               （非volatile变量不具备这样的属性，非volatile变量的值会被缓存，线程A更新了这个值，线程B读取这个变量的值可能读取的并不是更新后的值）
+    * 面试区分volatile和synchronized
+    * */
+    volatile具有可见性、有序性，不具备原子性。
+    volatile不具备原子性，这是volatile与java中的synchronized、java.util.concurrent.locks.Lock最大的功能差异，这一点在面试中也是非常容易问到的点。
+
+    密匙生成器（KeyGenerator），参考：https://blog.csdn.net/qq_15071263/article/details/84335632

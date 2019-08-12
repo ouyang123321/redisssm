@@ -1,0 +1,2 @@
+一）实体类生成工具命令：
+    mybatis-generator:generate -e

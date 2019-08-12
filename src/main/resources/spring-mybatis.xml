@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context" xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="
+       http://www.springframework.org/schema/beans
+       http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/context
+       http://www.springframework.org/schema/context/spring-context.xsd
+       http://www.springframework.org/schema/tx
+       http://www.springframework.org/schema/tx/spring-tx.xsd
+       http://www.springframework.org/schema/aop
+       http://www.springframework.org/schema/aop/spring-aop.xsd">
+
+    <!--1. 注解式开发 -->
+    <!--1) 注解驱动  annotation注解-->
+    <context:annotation-config/>
+    <!--2) 用注解方式注入bean，并指定查找范围：com.tlzx.oa及子子孙孙包-->
+    <context:component-scan base-package="com.tlzx"/>
+    <!--TODO 后期springmvc有变化   扫描spring （不能访问springmvc中的controller）上下文（除了springmvc可以访问spring中的service层由上至下访问）-->
+    <context:component-scan base-package="com.tlzx" use-default-filters="true">
+        <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+    </context:component-scan>
+
+    <!-- 已在spring.xml中配置，只能引入一次 -->
+    <!--2. 引入外置jdbc配置文件 -->
+    <!--<bean id="propertyConfigurer" class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">-->
+    <!--<property name="location" value="classpath:jdbc.properties"/>-->
+    <!--</bean>-->
+
+    <!--3. dbcp2数据库连接池配置-->
+    <bean id="dataSource" class="org.apache.commons.dbcp2.BasicDataSource"
+          destroy-method="close"><!-- destroy-method="close"的作用，当数据连接不使用的时候，就把该链接重新放到数据连接池中，方便下次使用 -->
+        <property name="driverClassName" value="${jdbc.driver}"/>
+        <property name="url" value="${jdbc.url}"/>
+        <property name="username" value="${jdbc.username}"/>
+        <property name="password" value="${jdbc.password}"/>
+        <!--初始连接数-->
+        <property name="initialSize" value="10"/>
+        <!--最大活动连接数-->
+        <property name="maxTotal" value="100"/>
+        <!--最大空闲连接数-->
+        <property name="maxIdle" value="50"/>
+        <!--最小空闲连接数-->
+        <property name="minIdle" value="10"/>
+        <!--设置为-1时，如果没有可用连接，连接池会一直无限期等待，直到获取到连接为止。-->
+        <!--如果设置为N（毫秒），则连接池会等待N毫秒，等待不到，则抛出异常-->
+        <property name="maxWaitMillis" value="-1"/>
+    </bean>
+
+    <!--4. spring和MyBatis整合 -->
+    <!--1) 创建sqlSessionFactory 配置mybatis绑定数据源-->
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <!-- 指定数据源 -->
+        <property name="dataSource" ref="dataSource"/>
+        <!-- 指定mybatis核心配置文件 -->
+        <property name="configLocation" value="classpath:mybatis.cfg.xml"/>
+        <!-- 自动扫描SQL配置文件XxxMapping.xml文件，**任意路径 -->
+        <property name="mapperLocations" value="classpath:mapper/*.xml"/>
+        <!-- 指定别名 me扫描model，使用别名 -->
+        <property name="typeAliasesPackage" value="com.tlzx.model"/>
+    </bean><!---->
+    <!--2) 自动扫描com/tlzx/oa/**/mapper下的所有XxxMapper接口(其实就是DAO接口)，并实现这些接口，注入到spring容器中-->
+    <!--   即可直接在程序中使用dao接口，不用再获取sqlsession对象-->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <!--basePackage 属性是映射器接口文件的包路径。-->
+        <!--你可以使用分号或逗号 作为分隔符设置多于一个的包路径-->
+        <property name="basePackage" value="com/tlzx/**/mapper"/>
+        <!--注入SQLSessionFactory-->
+        <property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"/>
+    </bean>
+
+
+    <!-- redis config start -->
+    <!-- 配置JedisPoolConfig实例 -->
+    <bean id="poolConfig" class="redis.clients.jedis.JedisPoolConfig">
+        <property name="maxIdle" value="${redis.maxIdle}" />
+        <property name="maxTotal" value="${redis.maxActive}" />
+        <property name="maxWaitMillis" value="${redis.maxWait}" />
+        <property name="testOnBorrow" value="${redis.testOnBorrow}" />
+    </bean>
+
+    <!-- 配置JedisConnectionFactory redis服务器中心-->
+    <bean id="jedisConnectionFactory" class="org.springframework.data.redis.connection.jedis.JedisConnectionFactory">
+        <property name="hostName" value="${redis.host}" />
+        <property name="port" value="${redis.port}" />
+        <property name="database" value="${redis.dbIndex}" />
+        <property name="poolConfig" ref="poolConfig" />
+        <!--<property name="password" value="${redis.pass}" />-->
+        <property name="timeout" value="${redis.timeout}" />
+    </bean>
+
+    <!-- 配置key的序列化方式,使用String类型进行序列化 -->
+    <bean id="stringRedisSerializer" class="org.springframework.data.redis.serializer.StringRedisSerializer"/>
+    <!-- 配置hashValue的序列化方式,使用Jackson serializer,将hashValue以json串的形式存储到redis中 -->
+    <bean id="genericJackson2JsonRedisSerializer"
+          class="org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer"/>
+
+    <!-- 配置RedisTemplate -->
+    <bean id="redisTemplate" class="org.springframework.data.redis.core.RedisTemplate">
+        <property name="connectionFactory" ref="jedisConnectionFactory" />
+        <!-- 配置默认的序列化策略,非hash的value和hashValue都有效-->
+        <property name="defaultSerializer" ref="genericJackson2JsonRedisSerializer"/>   <!--*******我加入这行之后Redis数据库的缓存就不乱码了********-->
+        <!-- Hash类型,用Jedis存储key为brandList,但是在redis-cli中查看key却是 "\xac\xed\x00\x05t\x00\tbrandList" -->
+        <property name="hashKeySerializer" ref="stringRedisSerializer"/>
+        <!-- 配置redis的key的序列化Serializer方式,使5中类型,key都以String类型进行序列化 -->
+        <property name="keySerializer" ref="stringRedisSerializer"/>
+
+        <!--<property name="hashValueSerializer" ref="stringRedisSerializer"/>
+        <property name="valueSerializer" ref="stringRedisSerializer"/>--><!--加上这行总是报下面这个bug-->
+        <!--NestedServletException: Request processing failed; nested exception is java.lang.ClassCastException: java.lang.String cannot be cast to java.util.List-->
+    </bean>
+<!---->
+    <!-- 配置RedisCacheManager -->
+    <bean id="redisCacheManager" class="org.springframework.data.redis.cache.RedisCacheManager">
+        <constructor-arg name="redisOperations" ref="redisTemplate" />
+        <property name="defaultExpiration" value="${redis.expiration}" />
+        <!-- 配置缓存区间 -->
+        <property name="cacheNames">
+            <list>
+                <value>aboutUser</value>
+            </list>
+        </property>
+    </bean>
+
+    <!-- 配置RedisCacheConfig -->
+    <bean id="redisCacheConfig" class="com.tlzx.util.RedisCacheConfig">
+        <constructor-arg ref="jedisConnectionFactory"/>
+        <constructor-arg ref="redisTemplate"/>
+        <constructor-arg ref="redisCacheManager"/>
+    </bean>
+    <!--<bean id="stringRedisSerializer" class="org.springframework.data.redis.serializer.StringRedisSerializer"/>
+    &lt;!&ndash;<bean id="jdkSerializationRedisSerializer" class="org.springframework.data.redis.serializer.JdkSerializationRedisSerializer"/>&ndash;&gt;
+
+
+
+    &lt;!&ndash; 配置RedisTemplate &ndash;&gt;
+    <bean id="redisTemplate" class="org.springframework.data.redis.core.RedisTemplate">
+        <property name="connectionFactory" ref="jedisConnectionFactory" />
+        <property name="hashKeySerializer" ref="stringRedisSerializer"/>
+        &lt;!&ndash;<property name="hashValueSerializer" ref="stringRedisSerializer"/>&ndash;&gt;
+        <property name="keySerializer" ref="stringRedisSerializer"/>
+        &lt;!&ndash;<property name="valueSerializer" ref="stringRedisSerializer"/>&ndash;&gt;&lt;!&ndash;该值可以使插入Redis的缓存值不乱码&ndash;&gt;
+        &lt;!&ndash;<property name="valueSerializer" ref="jdkSerializationRedisSerializer"/>&ndash;&gt;
+    </bean>
+
+    &lt;!&ndash;<bean id="redisUtil" class="com.tlzx.util.RedisUtil"></bean>&ndash;&gt;
+    &lt;!&ndash;<bean id="redisUtil2" class="com.tlzx.util.RedisCacheConfig"></bean>&ndash;&gt;
+
+    &lt;!&ndash; 配置RedisCacheManager &ndash;&gt;
+    <bean id="redisCacheManager" class="org.springframework.data.redis.cache.RedisCacheManager">
+        <constructor-arg name="redisOperations" ref="redisTemplate"/>
+        <property name="defaultExpiration" value="${redis.expiration}"/>
+        &lt;!&ndash; 配置缓存区间 &ndash;&gt;
+        <property name="cacheNames">
+            <list>
+                <value>aboutUser</value>
+            </list>
+        </property>
+    </bean>
+
+    &lt;!&ndash; 配置RedisCacheConfig &ndash;&gt;
+    <bean id="redisCacheConfig" class="com.tlzx.util.RedisUtil">&lt;!&ndash;com.tlzx.util.RedisCacheConfig&ndash;&gt;
+        &lt;!&ndash;<constructor-arg ref="jedisConnectionFactory"/>
+        <constructor-arg ref="redisTemplate"/>
+        <constructor-arg ref="redisCacheManager"/>&ndash;&gt;
+    </bean>-->
+    <!-- redis config end -->
+
+
+
+    <!--5. 注解式事务配置开始 -->
+    <!--1) 事务管理器 -->
+    <bean id="transactionManager"
+          class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="dataSource"/><!--注入数据连接池-->
+    </bean>
+
+    <!--2) 开启事务注解  me：配置基于注解的声明式事务-->
+    <tx:annotation-driven transaction-manager="transactionManager"/>
+
+<!--从现在开始你真的要节约钱了，虽然说靠节约是赚不了钱的，但是不节约的话就更加没有钱-->
+    <!-- 注解式事务配置结束 -->
+
+    <!--6) 开启自动代理 -->
+    <aop:aspectj-autoproxy/>
+</beans>
+<!--
+日程安排：八点半之前把单词记完，然后下班回去第一件事炒菜接着洗澡、洗衣、洗头发，然后敷面膜，洗完澡出来先敷面膜，一边敷面膜一遍洗衣服，洗完之后上床开电脑下载资料该看的看，该记的就记，十一点半之前睡觉
+-->
+<!--
+All that really matters is you don't stop trying.
+最关键的是，不要放弃尝试。
+-->
+<!--
+为什么每天都把自己弄得那么累呢？
+-->
+
+<!--待会把重新打成的war包上传，然后启动看一下能不能访问项目-->

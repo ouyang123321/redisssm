@@ -1,0 +1,94 @@
+<!DOCTYPE web-app PUBLIC
+        "-//Sun Microsystems, Inc.//DTD Web Application 2.3//EN"
+        "http://java.sun.com/dtd/web-app_2_3.dtd" >
+
+<web-app xmlns="http://xmlns.jcp.org/xml/ns/javaee"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_3_1.xsd"
+         version="3.1">
+
+  <!--<welcome-file-list>&lt;!&ndash;没用&ndash;&gt;
+    <welcome-file>/index.jsp</welcome-file>
+  </welcome-file-list>-->
+
+  <display-name>Archetype Created Web Application</display-name>
+  <!-- Spring和web项目集成start -->
+  <!-- spring上下文配置文件 -->
+  <context-param><!--me:加载spring bean-->
+    <param-name>contextConfigLocation</param-name>
+    <param-value>classpath:spring.xml</param-value>
+  </context-param>
+  <!-- 读取Spring上下文的监听器 -->
+  <listener>
+    <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
+  </listener>
+  <!-- Spring和web项目集成end -->
+
+  <!-- 防止Spring内存溢出监听器 -->
+  <listener>
+    <listener-class>org.springframework.web.util.IntrospectorCleanupListener</listener-class>
+  </listener>
+
+  <!-- 中文乱码处理 -->
+  <!--<filter>
+    <filter-name>encodingFilter</filter-name>
+    <filter-class>com.zking.test.util.EncodingFiter</filter-class>
+    &lt;!&ndash;web.xml 3.0的新特性，是否支持异步&ndash;&gt;
+    <async-supported>true</async-supported>
+    <init-param>
+      <param-name>encoding</param-name>
+      <param-value>UTF-8</param-value>
+    </init-param>
+  </filter>
+  <filter-mapping>
+    <filter-name>encodingFilter</filter-name>
+    <url-pattern>/*</url-pattern>
+  </filter-mapping>-->
+
+  <!-- 连接池 启用Web监控统计功能   start-->
+  <!--<filter>
+    <filter-name>DruidWebStatFilter</filter-name>
+    <filter-class>com.alibaba.druid.support.http.WebStatFilter</filter-class>
+    <init-param>
+      <param-name>exclusions</param-name> &lt;!&ndash; 经常需要排除一些不必要的url &ndash;&gt;
+      <param-value>*.js,*.gif,*.jpg,*.png,*.css,*.ico,/druid/*</param-value>
+    </init-param>
+  </filter>
+  <filter-mapping>
+    <filter-name>DruidWebStatFilter</filter-name>
+    <url-pattern>/*</url-pattern>
+  </filter-mapping>
+  <servlet>
+    <servlet-name>DruidStatView</servlet-name>
+    <servlet-class>com.alibaba.druid.support.http.StatViewServlet</servlet-class>&lt;!&ndash; 这个StatViewServlet的用途包括：提供监控信息展示的html页面;提供监控信息的JSON API &ndash;&gt;
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>DruidStatView</servlet-name>
+    <url-pattern>DispatcherServlet/druid/*</url-pattern>
+  </servlet-mapping>-->
+  <!-- 连接池 启用Web监控统计功能   end-->
+
+  <!-- Spring MVC servlet -->
+  <!-- 配置DispatcherServlet -->
+  <servlet>
+    <servlet-name>SpringMVC</servlet-name>
+    <servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+    <!--此参数可以不配置，默认值为：/WEB-INF/springmvc-servlet.xml-->
+    <init-param>
+      <param-name>contextConfigLocation</param-name>
+      <param-value>/WEB-INF/spring-mvc.xml</param-value>
+    </init-param>
+    <load-on-startup>1</load-on-startup>
+    <!--web.xml 3.0的新特性，是否支持异步-->
+    <async-supported>true</async-supported>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>SpringMVC</servlet-name>
+    <url-pattern>/</url-pattern>
+  </servlet-mapping>
+
+</web-app>
+
+        <!--
+              程序的主入口
+        -->
