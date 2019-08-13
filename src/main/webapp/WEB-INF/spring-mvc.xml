@@ -54,8 +54,8 @@
     <mvc:interceptors>
         <bean class="org.springframework.web.servlet.i18n.LocaleChangeInterceptor" />
     </mvc:interceptors>
-<!--然后所以他不想辞职，因为这里事情多你们做了，没他啥事-->
-    <!-- 6.2 配置文件上传解析器(CommonsMultipartResolver)-->
+
+    <!-- 6.2 配置文件上传解析器(CommonsMultipartResolver) 上传拦截-->
     <!--<bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
         &lt;!&ndash; 必须和用户JSP 的pageEncoding属性一致，以便正确解析表单的内容 &ndash;&gt;
         <property name="defaultEncoding" value="UTF-8"></property>

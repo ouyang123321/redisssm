@@ -30,23 +30,42 @@
     <!--</bean>-->
 
     <!--3. dbcp2数据库连接池配置-->
-    <bean id="dataSource" class="org.apache.commons.dbcp2.BasicDataSource"
-          destroy-method="close"><!-- destroy-method="close"的作用，当数据连接不使用的时候，就把该链接重新放到数据连接池中，方便下次使用 -->
+    <!--<bean id="dataSource" class="org.apache.commons.dbcp2.BasicDataSource"
+          destroy-method="close">&lt;!&ndash; destroy-method="close"的作用，当数据连接不使用的时候，就把该链接重新放到数据连接池中，方便下次使用 &ndash;&gt;
         <property name="driverClassName" value="${jdbc.driver}"/>
         <property name="url" value="${jdbc.url}"/>
         <property name="username" value="${jdbc.username}"/>
         <property name="password" value="${jdbc.password}"/>
-        <!--初始连接数-->
+        &lt;!&ndash;初始连接数&ndash;&gt;
         <property name="initialSize" value="10"/>
-        <!--最大活动连接数-->
+        &lt;!&ndash;最大活动连接数&ndash;&gt;
         <property name="maxTotal" value="100"/>
-        <!--最大空闲连接数-->
+        &lt;!&ndash;最大空闲连接数&ndash;&gt;
         <property name="maxIdle" value="50"/>
-        <!--最小空闲连接数-->
+        &lt;!&ndash;最小空闲连接数&ndash;&gt;
         <property name="minIdle" value="10"/>
-        <!--设置为-1时，如果没有可用连接，连接池会一直无限期等待，直到获取到连接为止。-->
-        <!--如果设置为N（毫秒），则连接池会等待N毫秒，等待不到，则抛出异常-->
+        &lt;!&ndash;设置为-1时，如果没有可用连接，连接池会一直无限期等待，直到获取到连接为止。&ndash;&gt;
+        &lt;!&ndash;如果设置为N（毫秒），则连接池会等待N毫秒，等待不到，则抛出异常&ndash;&gt;
         <property name="maxWaitMillis" value="-1"/>
+    </bean>-->
+    <!-- 数据库连接池 -->
+    <bean id="dataSource" class="com.alibaba.druid.pool.DruidDataSource" init-method="init" destroy-method="clone">
+        <property name="driverClassName" value="${jdbc.driver}"/>
+        <property name="url" value="${jdbc.url}"/>
+        <property name="username" value="${jdbc.username}"/>
+        <property name="password" value="${jdbc.password}"/>
+        <!-- 配置初始化大小、最小、最大 -->
+        <!-- 通常来说，只需要修改initialSize、minIdle、maxActive -->
+        <!-- 初始化时建立物理连接的个数，缺省值为0 -->
+        <property name="initialSize" value="${druid.initialSize}"/>
+        <!-- 最小连接池数量 -->
+        <property name="minIdle" value="${druid.minIdle}"/>
+        <!-- 最大连接池数量，缺省值为8 -->
+        <property name="maxActive" value="${druid.maxActive}"/>
+        <!-- 获取连接时最大等待时间，单位毫秒。配置了maxWait之后，缺省启用公平锁，并发效率会有所下降，如果需要可以通过配置useUnfairLock属性为true使用非公平锁。 -->
+        <property name="maxWait" value="${druid.maxWait}"/>
+        <!-- 添加此处作用是为了在SQL监控页面显示sql执行语句，不配置不显示 -->
+        <property name="filters" value="${druid.filters}" />
     </bean>
 
     <!--4. spring和MyBatis整合 -->
@@ -60,7 +79,11 @@
         <property name="mapperLocations" value="classpath:mapper/*.xml"/>
         <!-- 指定别名 me扫描model，使用别名 -->
         <property name="typeAliasesPackage" value="com.tlzx.model"/>
-    </bean><!---->
+    </bean>
+    <!--&lt;!&ndash; spring为了和mybatis有更好的整合，实现了SqlSessionTemplate，通过该类实现增删改查操作 &ndash;&gt;
+    <bean id="sqlSessionTemplateABC" class="org.mybatis.spring.SqlSessionTemplate">
+        <constructor-arg ref="sqlSessionFactory" />
+    </bean>-->
     <!--2) 自动扫描com/tlzx/oa/**/mapper下的所有XxxMapper接口(其实就是DAO接口)，并实现这些接口，注入到spring容器中-->
     <!--   即可直接在程序中使用dao接口，不用再获取sqlsession对象-->
     <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
@@ -81,7 +104,7 @@
         <property name="testOnBorrow" value="${redis.testOnBorrow}" />
     </bean>
 
-    <!-- 配置JedisConnectionFactory redis服务器中心-->
+    <!-- 配置JedisConnectionFactory redis服务器中心 -->
     <bean id="jedisConnectionFactory" class="org.springframework.data.redis.connection.jedis.JedisConnectionFactory">
         <property name="hostName" value="${redis.host}" />
         <property name="port" value="${redis.port}" />
@@ -110,9 +133,16 @@
         <!--<property name="hashValueSerializer" ref="stringRedisSerializer"/>
         <property name="valueSerializer" ref="stringRedisSerializer"/>--><!--加上这行总是报下面这个bug-->
         <!--NestedServletException: Request processing failed; nested exception is java.lang.ClassCastException: java.lang.String cannot be cast to java.util.List-->
+
+        <!--下面这些我加的，作用有待测试-->
+        <!--<property name="valueSerializer">
+            <bean class="org.springframework.data.redis.serializer.JdkSerializationRedisSerializer"/>
+        </property>
+        &lt;!&ndash;开启事务&ndash;&gt;
+        <property name="enableTransactionSupport" value="true"/>-->
     </bean>
-<!---->
-    <!-- 配置RedisCacheManager -->
+
+    <!-- 配置RedisCacheManager redis缓存管理器 -->
     <bean id="redisCacheManager" class="org.springframework.data.redis.cache.RedisCacheManager">
         <constructor-arg name="redisOperations" ref="redisTemplate" />
         <property name="defaultExpiration" value="${redis.expiration}" />
@@ -130,45 +160,10 @@
         <constructor-arg ref="redisTemplate"/>
         <constructor-arg ref="redisCacheManager"/>
     </bean>
-    <!--<bean id="stringRedisSerializer" class="org.springframework.data.redis.serializer.StringRedisSerializer"/>
-    &lt;!&ndash;<bean id="jdkSerializationRedisSerializer" class="org.springframework.data.redis.serializer.JdkSerializationRedisSerializer"/>&ndash;&gt;
 
-
-
-    &lt;!&ndash; 配置RedisTemplate &ndash;&gt;
-    <bean id="redisTemplate" class="org.springframework.data.redis.core.RedisTemplate">
-        <property name="connectionFactory" ref="jedisConnectionFactory" />
-        <property name="hashKeySerializer" ref="stringRedisSerializer"/>
-        &lt;!&ndash;<property name="hashValueSerializer" ref="stringRedisSerializer"/>&ndash;&gt;
-        <property name="keySerializer" ref="stringRedisSerializer"/>
-        &lt;!&ndash;<property name="valueSerializer" ref="stringRedisSerializer"/>&ndash;&gt;&lt;!&ndash;该值可以使插入Redis的缓存值不乱码&ndash;&gt;
-        &lt;!&ndash;<property name="valueSerializer" ref="jdkSerializationRedisSerializer"/>&ndash;&gt;
-    </bean>
-
-    &lt;!&ndash;<bean id="redisUtil" class="com.tlzx.util.RedisUtil"></bean>&ndash;&gt;
-    &lt;!&ndash;<bean id="redisUtil2" class="com.tlzx.util.RedisCacheConfig"></bean>&ndash;&gt;
-
-    &lt;!&ndash; 配置RedisCacheManager &ndash;&gt;
-    <bean id="redisCacheManager" class="org.springframework.data.redis.cache.RedisCacheManager">
-        <constructor-arg name="redisOperations" ref="redisTemplate"/>
-        <property name="defaultExpiration" value="${redis.expiration}"/>
-        &lt;!&ndash; 配置缓存区间 &ndash;&gt;
-        <property name="cacheNames">
-            <list>
-                <value>aboutUser</value>
-            </list>
-        </property>
-    </bean>
-
-    &lt;!&ndash; 配置RedisCacheConfig &ndash;&gt;
-    <bean id="redisCacheConfig" class="com.tlzx.util.RedisUtil">&lt;!&ndash;com.tlzx.util.RedisCacheConfig&ndash;&gt;
-        &lt;!&ndash;<constructor-arg ref="jedisConnectionFactory"/>
-        <constructor-arg ref="redisTemplate"/>
-        <constructor-arg ref="redisCacheManager"/>&ndash;&gt;
-    </bean>-->
-    <!-- redis config end -->
-
-
+    <!--下面这两行我加的，作用不明-->
+    <!--<bean id="keyGenerator" class="com.ds.config.redis.KeyGenerator"/>
+    <cache:annotation-driven cache-manager="redisCacheManager" key-generator="keyGenerator"/>-->
 
     <!--5. 注解式事务配置开始 -->
     <!--1) 事务管理器 -->
@@ -180,11 +175,41 @@
     <!--2) 开启事务注解  me：配置基于注解的声明式事务-->
     <tx:annotation-driven transaction-manager="transactionManager"/>
 
-<!--从现在开始你真的要节约钱了，虽然说靠节约是赚不了钱的，但是不节约的话就更加没有钱-->
+    <!--<tx:advice id="txAdvice" transaction-manager="transactionManager">
+        &lt;!&ndash; 		配置方法的过滤规则 &ndash;&gt;
+        <tx:attributes>
+            <tx:method name="delete*" propagation="REQUIRED" read-only="false"
+                       rollback-for="java.lang.Exception"/>
+            <tx:method name="insert*" propagation="REQUIRED" read-only="false"
+                       rollback-for="java.lang.Exception" />
+            <tx:method name="update*" propagation="REQUIRED" read-only="false"
+                       rollback-for="java.lang.Exception" />
+            <tx:method name="edit*" propagation="REQUIRED" read-only="false"
+                       rollback-for="java.lang.Exception" />
+            <tx:method name="save*" propagation="REQUIRED" read-only="false"
+                       rollback-for="java.lang.Exception" />
+            <tx:method name="execut*" propagation="REQUIRED" read-only="false"
+                       rollback-for="java.lang.Exception" />
+        </tx:attributes>
+    </tx:advice>
+    &lt;!&ndash; 事务处理************************* &ndash;&gt;
+    <aop:config>
+        <aop:pointcut id="pc" expression="execution(* com.jsoft.services..*.*(..))" />
+        <aop:advisor pointcut-ref="pc" advice-ref="txAdvice" />
+    </aop:config>-->
+
     <!-- 注解式事务配置结束 -->
 
     <!--6) 开启自动代理 -->
-    <aop:aspectj-autoproxy/>
+    <aop:aspectj-autoproxy/><!--有一个proxy-target-class属性，默认为false，表示使用jdk动态代理织入增强-->
+    <!-- 启动@AspectJ支持 -->
+    <!--输出： Hello: employee proxy class is class com.sun.proxy.$Proxy12-->
+
+    <!-- 采用cglib代理，不需要声明接口 -->
+    <!--<aop:aspectj-autoproxy proxy-target-class="true"/>-->
+    <!--表示使用CGLib动态代理技术织入增强。不过即使proxy-target-class设置为false，如果目标类没有声明接口，则spring将自动使用CGLib动态代理。-->
+    <!--输出：Hello: employee proxy class is class salesdepart.service.app.SalesDepartEmployee$$EnhancerBySpringCGLIB $ $ 397e3c56-->
+
 </beans>
 <!--
 日程安排：八点半之前把单词记完，然后下班回去第一件事炒菜接着洗澡、洗衣、洗头发，然后敷面膜，洗完澡出来先敷面膜，一边敷面膜一遍洗衣服，洗完之后上床开电脑下载资料该看的看，该记的就记，十一点半之前睡觉
@@ -196,5 +221,3 @@ All that really matters is you don't stop trying.
 <!--
 为什么每天都把自己弄得那么累呢？
 -->
-
-<!--待会把重新打成的war包上传，然后启动看一下能不能访问项目-->
